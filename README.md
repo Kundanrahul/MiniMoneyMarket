@@ -33,7 +33,7 @@ A minimal lending and borrowing protocol built in Solidity using Foundry. Users 
 - Oracle staleness checks and TWAP smoothing
 - Manual audit folder included with Slither and gas reports
 - No upgradeability or proxy patterns (static contracts)
-- 📄 [Full Security Audit Report](https://github.com/Kundanrahul/audit-report/blob/main/MiniMoneyMarket/security.md)
+- 📄 [Full Security Report](https://github.com/Kundanrahul/audit-report/blob/main/MiniMoneyMarket)
 
 
 ---
