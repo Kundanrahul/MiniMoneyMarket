@@ -1,10 +1,10 @@
 "use client";
 
-import Navbar from "./components/Navbar";
-import DepositForm from "./components/DepositForm";
-import BorrowForm from "./components/BorrowForm";
-import RepayForm from "./components/RepayForm";
-import WithdrawForm from "./components/WithdrawForm";
+import Navbar from "../components/Navbar";
+import DepositForm from "../components/DepositForm";
+import BorrowForm from "../components/BorrowForm";
+import RepayForm from "../components/RepayForm";
+import WithdrawForm from "../components/WithdrawForm";
 
 export default function Home() {
   return (
