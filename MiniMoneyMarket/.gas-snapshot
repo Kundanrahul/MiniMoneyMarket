@@ -1,0 +1,7 @@
+InterestRateModelTest:testBaseRate() (gas: 11048)
+InterestRateModelTest:testFullUtilizationRate() (gas: 11904)
+InterestRateModelTest:testHalfUtilizationRate() (gas: 12065)
+LendingPoolTest:testBorrowAndRepay() (gas: 256056)
+LendingPoolTest:testDeposit() (gas: 151522)
+LendingPoolTest:testWithdraw() (gas: 175309)
+LiquidationTest:testLiquidation() (gas: 183050)
