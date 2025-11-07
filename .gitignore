@@ -1,0 +1,35 @@
+# === Foundry (MiniMoneyMarket) ===
+lib/
+out/
+cache/
+gas-snapshot*
+*.tsbuildinfo
+
+# === Node.js / Frontend ===
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.production
+.env.development
+
+# === OS & Editor Artifacts ===
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*.tmp
+
+# === VSCode ===
+.vscode/
+
+# === Coverage & Testing ===
+coverage/
+*.lcov
+
+# === Misc ===
+*.lock
+*.bak
+*.orig
