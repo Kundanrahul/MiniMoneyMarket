@@ -6,32 +6,32 @@ import CollateralTokenABI from "../abis/CollateralToken.json";
 
 export const CONTRACTS = {
   LendingPool: {
-    address: "0xb2Feb95eDFCD70CEC44C418F91D80483eAA77167",
+    address: "0xb6509579fCde3e0eD2fF1383E80624CF321dC793", 
     abi: LendingPoolABI,
   },
   PriceOracle: {
-    address: "0xFD128c0CBab5AE28299360864F7f60eE0978F2B9",
+    address: "0x1ca32Cd24E6396C18DfA822965c4eb7B336EB33A",
     abi: PriceOracleABI,
   },
   InterestRateModel: {
-    address: "0x00e61243808f6451151017BbD079eeAE8b448557",
+    address: "0xF862c02A804E1b0b67024dDDC595D0153554adb1", 
     abi: InterestRateModelABI,
   },
   MockDAI: {
-    address: "0x98fBe6687dF5843143Ec1CdC7Ff37C714F0B6963",
+    address: "0xa6FB456163dd93B735aDb8e0FFb8dAA7EAB0dD0a", 
     abi: MockERC20ABI,
   },
   MockUSDC: {
-    address: "0x82903D8934c2DDD78Ea403e53608E67d3E1a7070", 
+    address: "0xd5B0666C5Fe3328D37B41f945834bBaE9b9Fa916",
     abi: MockERC20ABI,
   },
   MockERC20: {
     // generic ERC20 ABI fallback
-    address: "0x98fBe6687dF5843143Ec1CdC7Ff37C714F0B6963",
+    address: "0xa6FB456163dd93B735aDb8e0FFb8dAA7EAB0dD0a",
     abi: MockERC20ABI,
   },
   CollateralToken: {
-    address: "0xe1E89291bdC7777F0C9aB1C6a79B086dc4dCC9f3",
+    address: "0xaeEC5Af28CB9789B19CD4188405717c37b592CBF",
     abi: CollateralTokenABI,
   },
 };
