@@ -24,6 +24,14 @@ export default function Home() {
           <RepayForm />
         </div>
       </div>
+     <footer className="flex flex-col items-center justify-center h-24 text-xs text-slate-300 border-t border-slate-700 mt-4 space-y-1">
+  <p>
+    This is a Decentralized finance dashboard.
+  </p>
+  <p>
+    © {new Date().getFullYear()} Tested/Scripted with Foundry and Slither
+  </p>
+</footer>
     </div>
   );
 }
