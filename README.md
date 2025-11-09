@@ -6,12 +6,12 @@ A minimal lending and borrowing protocol built in Solidity using Foundry. Users 
 
 ## ✨ Features
 
-- ✅ Single collateral / single borrow token setup
-- ✅ ERC20-based collateral shares (`CollateralToken`)
-- ✅ Interest accrual via dynamic rate model
-- ✅ Liquidation logic with close factor and incentive
-- ✅ Custom `PriceOracle` with TWAP support
-- ✅ Security-aware design (reentrancy guard, SafeERC20, staleness checks)
+- Single collateral / single borrow token setup
+- ERC20-based collateral shares (`CollateralToken`)
+- Interest accrual via dynamic rate model
+- Liquidation logic with close factor and incentive
+- Custom `PriceOracle` with TWAP support
+- Security-aware design (reentrancy guard, SafeERC20, staleness checks)
 
 ---
 
