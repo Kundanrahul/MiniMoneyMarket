@@ -18,44 +18,49 @@ export default function BorrowForm() {
 
   const handleBorrow = async () => {
     if (!pool || !borrowToken || !signer || !account) {
-      return toast.error("Wallet not connected or contracts missing");
+      return toast.error("⚠️ Wallet not connected or contracts missing");
     }
     if (!amount || Number(amount) <= 0) {
-      return toast.error("Enter an amount greater than 0");
+      return toast.error("✍️ Enter an amount greater than 0");
     }
 
     try {
-      const decimalsBigInt = await borrowToken.decimals?.() ?? 18n;
-      const decimals = Number(decimalsBigInt);
-      const amt = ethers.parseUnits(amount, decimals);
+      // USDC is 6 decimals
+      const amt = ethers.parseUnits(amount, 6);
 
+      // Check min borrow
       const chainMin: bigint = await pool.minBorrow();
-
       if (amt < chainMin) {
-        const minHuman = Number(chainMin) / 10 ** decimals;
+        const minHuman = ethers.formatUnits(chainMin, 6);
         return toast.error(`Borrow amount must be at least ${minHuman} USDC`);
       }
 
+      // Get user account data (values in USD WAD)
       const [collateralUSD, borrowUSD] = await pool.getUserAccountData(account);
       const liquidationThreshold: bigint = await pool.liquidationThreshold();
-      const maxBorrowUSD = (collateralUSD * liquidationThreshold) / 10n ** 18n;
 
-      const amountUSD = Number(amount);
+      // Max borrow in USD WAD
+      const maxBorrowUSD = (collateralUSD * liquidationThreshold) / ethers.parseUnits("1", 18);
 
-      if (Number(borrowUSD) / 1e18 + amountUSD > Number(maxBorrowUSD) / 1e18) {
+      // Requested amount in USD WAD (convert USDC → USD using oracle inside contract)
+      // For simplicity, approximate 1 USDC = 1 USD here
+      const requestedUSD = ethers.parseUnits(amount, 18);
+
+      if (borrowUSD + requestedUSD > maxBorrowUSD) {
         const maxHuman = Number(maxBorrowUSD) / 1e18;
-        return toast.error(`Borrow exceeds max allowed. You can borrow up to ${maxHuman} USDC`);
+        return toast.error(`Borrow exceeds max allowed. You can borrow up to ${maxHuman.toFixed(2)} USDC`);
       }
 
-      toast.loading("Borrowing...", { id: "borrow" });
+      toast.loading("📤 Borrowing...", { id: "borrow" });
       const tx = await pool.connect(signer).borrow(amt);
+      console.log("Borrow tx hash:", tx.hash);
       await tx.wait();
-      toast.success("Borrow successful ✅", { id: "borrow" });
+      toast.success("✅ Borrow successful", { id: "borrow" });
 
       setAmount("");
     } catch (err: any) {
       console.error("Borrow failed with error:", err);
-      toast.error("Borrow failed: " + (err?.reason ?? err?.message ?? err), { id: "borrow" });
+      toast.error("❌ Borrow failed: " + (err?.reason ?? err?.message ?? err), { id: "borrow" });
     }
   };
 
@@ -69,7 +74,7 @@ export default function BorrowForm() {
           step="any"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="Amount to borrow"
+          placeholder="Amount to borrow (USDC)"
           className="w-full p-3 rounded-lg bg-white/10 outline-none text-white placeholder-gray-300 mb-4 font-sans"
         />
         <button
