@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ethers } from "ethers";
 import { useAccount, usePublicClient } from "wagmi";
 import { useLendingPool } from "../app/hooks/useContract";
 import { CONTRACTS } from "../app/lib/contracts";
 import CollateralTokenABI from "../app/abis/CollateralToken.json";
-import LendingPoolABI from "../app/abis/LendingPool.json"; // ensure this includes principalBorrow, userBorrowIndex, borrowIndex
+import LendingPoolABI from "../app/abis/LendingPool.json";
 
 export default function UserDashboard() {
   const pool = useLendingPool();
@@ -17,21 +17,36 @@ export default function UserDashboard() {
   const [borrowedUSDC, setBorrowedUSDC] = useState<bigint>(0n);
   const [error, setError] = useState<string>("");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       if (!pool || !address || !publicClient) return;
-      const provider = new ethers.JsonRpcProvider(publicClient.transport.url);
 
-      // 1) Deposited DAI via shares → underlying tokens
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+
+      const lendingPool = new ethers.Contract(
+        CONTRACTS.LendingPool.address,
+        LendingPoolABI,
+        provider
+      );
+
+      const collateralShareAddress: string = await lendingPool.collateralShare();
+      console.log("Resolved collateralShare address from pool:", collateralShareAddress);
+
       const collateralShare = new ethers.Contract(
-        CONTRACTS.CollateralToken.address,
+        collateralShareAddress,
         CollateralTokenABI,
         provider
       );
 
+      // Collateral shares → underlying DAI
       const userShares: bigint = await collateralShare.balanceOf(address);
       const totalShares: bigint = await collateralShare.totalSupply();
-      const totalCollateral: bigint = await pool.totalCollateral();
+      const totalCollateral: bigint = await lendingPool.totalCollateral();
+
+      console.log("Dashboard address:", address);
+      console.log("User shares:", userShares.toString());
+      console.log("Total shares:", totalShares.toString());
+      console.log("Total collateral:", totalCollateral.toString());
 
       let userCollateralTokens = 0n;
       if (totalShares > 0n) {
@@ -39,35 +54,33 @@ export default function UserDashboard() {
       }
       setDepositedDAI(userCollateralTokens);
 
-      // 2) Borrowed USDC using pool’s accounting (principalBorrow, userBorrowIndex, borrowIndex)
-      const lendingPool = new ethers.Contract(
-        CONTRACTS.LendingPool.address, // 0xb6509579... your pool address
-        LendingPoolABI,
-        provider
-      );
-
+      // Borrowed USDC
       const p: bigint = await lendingPool.principalBorrow(address);
+      console.log("Principal borrow:", p.toString());
+
       if (p === 0n) {
         setBorrowedUSDC(0n);
       } else {
         let userIdx: bigint = await lendingPool.userBorrowIndex(address);
         const globalIdx: bigint = await lendingPool.borrowIndex();
 
-        // If userIdx is zero, default to current borrowIndex (matches contract logic)
+        console.log("User borrow index:", userIdx.toString());
+        console.log("Global borrow index:", globalIdx.toString());
+
         if (userIdx === 0n) userIdx = globalIdx;
 
-        const currentDebt: bigint = (p * globalIdx) / userIdx; // raw USDC units (6 decimals)
+        const currentDebt: bigint = (p * globalIdx) / userIdx; // 6 decimals
         setBorrowedUSDC(currentDebt);
       }
     } catch (err: any) {
       console.error("Error fetching user data:", err);
       setError(err.reason || err.message || "Failed to fetch user data.");
     }
-  };
+  }, [pool, address, publicClient]);
 
   useEffect(() => {
     fetchData();
-  }, [pool, address, publicClient]);
+  }, [fetchData]);
 
   return (
     <div className="p-4 sm:p-6 w-full max-w-xs sm:max-w-md rounded-xl glass text-white backdrop-blur-lg bg-white/10 border border-white/20 shadow-lg text-sm sm:text-base">
@@ -92,6 +105,7 @@ export default function UserDashboard() {
     </div>
   );
 }
+
 
 
 
