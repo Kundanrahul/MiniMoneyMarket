@@ -21,7 +21,7 @@ export default function BorrowForm() {
       return toast.error("⚠️ Wallet not connected or contracts missing");
     }
     if (!amount || Number(amount) <= 0) {
-      return toast.error("✍️ Enter an amount greater than 0");
+      return toast.error("Enter an amount greater than 0");
     }
 
     try {
