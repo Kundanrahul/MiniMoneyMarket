@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { ethers } from "ethers";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount } from "wagmi";
 import { useLendingPool } from "../app/hooks/useContract";
 import { CONTRACTS } from "../app/lib/contracts";
 import CollateralTokenABI from "../app/abis/CollateralToken.json";
@@ -11,7 +11,6 @@ import LendingPoolABI from "../app/abis/LendingPool.json";
 export default function UserDashboard() {
   const pool = useLendingPool();
   const { address } = useAccount();
-  const publicClient = usePublicClient();
 
   const [depositedDAI, setDepositedDAI] = useState<bigint>(0n);
   const [borrowedUSDC, setBorrowedUSDC] = useState<bigint>(0n);
@@ -19,7 +18,7 @@ export default function UserDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      if (!pool || !address || !publicClient) return;
+      if (!pool || !address) return;
 
       const provider = new ethers.BrowserProvider((window as any).ethereum);
 
@@ -30,8 +29,6 @@ export default function UserDashboard() {
       );
 
       const collateralShareAddress: string = await lendingPool.collateralShare();
-      console.log("Resolved collateralShare address from pool:", collateralShareAddress);
-
       const collateralShare = new ethers.Contract(
         collateralShareAddress,
         CollateralTokenABI,
@@ -43,11 +40,6 @@ export default function UserDashboard() {
       const totalShares: bigint = await collateralShare.totalSupply();
       const totalCollateral: bigint = await lendingPool.totalCollateral();
 
-      console.log("Dashboard address:", address);
-      console.log("User shares:", userShares.toString());
-      console.log("Total shares:", totalShares.toString());
-      console.log("Total collateral:", totalCollateral.toString());
-
       let userCollateralTokens = 0n;
       if (totalShares > 0n) {
         userCollateralTokens = (userShares * totalCollateral) / totalShares;
@@ -56,16 +48,12 @@ export default function UserDashboard() {
 
       // Borrowed USDC
       const p: bigint = await lendingPool.principalBorrow(address);
-      console.log("Principal borrow:", p.toString());
 
       if (p === 0n) {
         setBorrowedUSDC(0n);
       } else {
         let userIdx: bigint = await lendingPool.userBorrowIndex(address);
         const globalIdx: bigint = await lendingPool.borrowIndex();
-
-        console.log("User borrow index:", userIdx.toString());
-        console.log("Global borrow index:", globalIdx.toString());
 
         if (userIdx === 0n) userIdx = globalIdx;
 
@@ -76,11 +64,44 @@ export default function UserDashboard() {
       console.error("Error fetching user data:", err);
       setError(err.reason || err.message || "Failed to fetch user data.");
     }
-  }, [pool, address, publicClient]);
+  }, [pool, address]);
 
+  // Initial load + polling
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 5000); // refresh every 5s
+    return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Event listeners for instant updates
+  useEffect(() => {
+    if (!address) return;
+
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const lendingPool = new ethers.Contract(
+      CONTRACTS.LendingPool.address,
+      LendingPoolABI,
+      provider
+    );
+
+    const updateOnEvent = (user: string) => {
+      if (user.toLowerCase() === address.toLowerCase()) {
+        fetchData();
+      }
+    };
+
+    lendingPool.on("Deposit", updateOnEvent);
+    lendingPool.on("Withdraw", updateOnEvent);
+    lendingPool.on("Borrow", updateOnEvent);
+    lendingPool.on("Repay", updateOnEvent);
+
+    return () => {
+      lendingPool.removeAllListeners("Deposit");
+      lendingPool.removeAllListeners("Withdraw");
+      lendingPool.removeAllListeners("Borrow");
+      lendingPool.removeAllListeners("Repay");
+    };
+  }, [address, fetchData]);
 
   return (
     <div className="p-4 sm:p-6 w-full max-w-xs sm:max-w-md rounded-xl glass text-white backdrop-blur-lg bg-white/10 border border-white/20 shadow-lg text-sm sm:text-base">
