@@ -5,11 +5,20 @@ import toast, { Toaster } from "react-hot-toast";
 import { ethers } from "ethers";
 import { useLendingPool, useMockDAI, useProviderAndSigner } from "../app/hooks/useContract";
 
-//types/typechain
+// types/typechain
 import { MockERC20 } from "../app/types/MockERC20";
 import { LendingPool } from "../app/types/LendingPool";
 
-export default function DepositForm() {
+const SWAPPER_ADDRESS = "0xE36696DCEfdaC47d9Ec2bBB318EEA930524ee3fE";
+
+// Match backend constant: 1 DAI = 0.00001 ETH
+const ETH_PER_DAI = ethers.parseEther("0.00001");
+
+interface DepositFormProps {
+  onDepositComplete?: () => void; // optional callback to refresh dashboard
+}
+
+export default function DepositForm({ onDepositComplete }: DepositFormProps) {
   const pool = useLendingPool() as LendingPool | null;
   const dai = useMockDAI() as MockERC20 | null;
   const { signer, account } = useProviderAndSigner();
@@ -18,49 +27,72 @@ export default function DepositForm() {
 
   const handleDeposit = async () => {
     if (!pool || !dai || !signer || !account) {
-      return toast.error("Wallet not connected or contracts missing");
+      return toast.error("⚠️ Wallet not connected or contracts missing");
     }
-
     if (!amount || Number(amount) <= 0) {
-      return toast.error("Enter an amount greater than 0");
+      return toast.error("✍️ Enter an amount greater than 0");
     }
 
     try {
-      console.log("Connected account:", account);
-      console.log("Token contract address:", dai?.target);
-      console.log("Pool contract address:", pool?.target);
-      console.log("Chain ID:", await signer.provider?.getNetwork());
+      const amt = ethers.parseUnits(amount, 18);
 
-      const decimalsBigInt = await dai.decimals?.() ?? 18n;
-      const decimals = Number(decimalsBigInt);
-      const amt = ethers.parseUnits(amount, decimals);
+      // Check wallet balance
+      let balance: bigint = await dai.balanceOf(account);
+      console.log("Wallet MockDAI balance before deposit:", balance.toString());
 
-      const balance: bigint = await dai.balanceOf(account);
-      console.log("Token balance:", balance.toString(), "Required:", amt.toString());
-
+      // If insufficient balance, auto-swap ETH → MockDAI
       if (balance < amt) {
-        return toast.error("Insufficient token balance");
+        const requiredEth = (amt * ETH_PER_DAI) / ethers.parseUnits("1", 18);
+        const ethHuman = ethers.formatEther(requiredEth);
+
+        toast.loading(`🔄 Swapping ${ethHuman} Sepolia ETH for MockDAI...`, { id: "swap" });
+        const swapTx = await signer.sendTransaction({
+          to: SWAPPER_ADDRESS,
+          value: requiredEth,
+        });
+        console.log("Swap tx hash:", swapTx.hash);
+        await swapTx.wait();
+        toast.success("✅ Swap complete! You now have MockDAI", { id: "swap" });
+
+        // Refresh balance
+        balance = await dai.balanceOf(account);
+        console.log("Wallet MockDAI balance after swap:", balance.toString());
+        if (balance < amt) {
+          return toast.error("❌ Swap did not yield enough MockDAI");
+        }
       }
 
+      // Approve if needed
       const allowance: bigint = await dai.allowance(account, pool.target);
-      console.log("Allowance:", allowance.toString());
-
+      console.log("Current allowance:", allowance.toString());
       if (allowance < amt) {
-        toast.loading("Approving tokens...", { id: "deposit" });
-        const approveTx = await dai.connect(signer).approve(pool.target, amt);
+        toast.loading("🔑 Approving tokens...", { id: "deposit" });
+        const approveTx = await dai.connect(signer).approve(pool.target, ethers.MaxUint256);
+        console.log("Approve tx hash:", approveTx.hash);
         await approveTx.wait();
-        toast.success("Approval successful ✅", { id: "deposit" });
+        toast.success("✅ Approval granted", { id: "deposit" });
       }
 
-      toast.loading("Depositing...", { id: "deposit" });
+      // Deposit
+      toast.loading("📥 Depositing MockDAI...", { id: "deposit" });
       const depositTx = await pool.connect(signer).deposit(amt);
+      console.log("Deposit tx hash:", depositTx.hash);
       await depositTx.wait();
-      toast.success("Deposit successful ✅", { id: "deposit" });
+      toast.success("🎉 Deposit successful!", { id: "deposit" });
+
+      const balanceAfter: bigint = await dai.balanceOf(account);
+      console.log("Wallet MockDAI balance after deposit:", balanceAfter.toString());
 
       setAmount("");
+
+      if (onDepositComplete) {
+        onDepositComplete();
+      }
     } catch (err: any) {
-      console.error(err);
-      toast.error("Deposit failed: " + (err?.reason ?? err?.message ?? err), { id: "deposit" });
+      console.error("Deposit failed:", err);
+      toast.error("❌ Deposit failed: " + (err?.reason ?? err?.message ?? err), {
+        id: "deposit",
+      });
     }
   };
 
@@ -77,7 +109,7 @@ export default function DepositForm() {
           step="any"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="Amount (token decimals)"
+          placeholder="Amount (DAI)"
           className="w-full p-3 rounded-lg bg-white/10 outline-none text-white placeholder-gray-300 mb-4 font-sans"
         />
 
